@@ -28,3 +28,21 @@ hiddenimports = [
 additional_args = ["--clean", "--noupx"]
 
 # icon = "icon.ico"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+pythonpath = ["src"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--no-cov-on-fail"
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/venv/*", "*/site-packages/*"]
+
+[tool.coverage.report]
+show_missing = true
+precision = 2

@@ -8,3 +8,11 @@ __pycache__
 !Sample.csv
 *.xml
 /venv*
+# Pytest
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Coverage
+htmlcov/
+.coverage
