@@ -6,6 +6,7 @@ import tempfile
 import os
 from datetime import datetime
 from src.monitel_framework.files import FileManager, CLIManager
+from pathlib import Path
 
 
 class TestFileManager(unittest.TestCase):
@@ -25,13 +26,17 @@ class TestFileManager(unittest.TestCase):
         self.assertTrue(os.path.exists(log_path))
         self.assertTrue(os.path.isdir(log_path))
 
+    from pathlib import Path
+
     def test_get_log_path(self):
-        """Проверка пути к лог-файлу (с добавлением даты)"""
-        # Предполагаем, что get_log_path добавляет дату
+        """Проверка пути к лог-файлу (через Path)"""
+        from datetime import datetime
         date_str = datetime.now().strftime("%Y-%m-%d")
         log_path = self.file_manager.get_log_path("test.log")
-        expected = os.path.join(self.temp_dir.name, "log", f"test_{date_str}.log")
-        self.assertEqual(str(log_path), expected)
+        expected = Path(self.temp_dir.name) / "log" / f"test_{date_str}.log"
+
+        # ✅ Сравниваем как Path
+        self.assertEqual(log_path.resolve(), expected.resolve())
 
     def test_validate_directory(self):
         """Проверка валидации директории"""
