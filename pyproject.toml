@@ -3,35 +3,26 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "Конвертер CSV-RDF"
+name = "csv-to-rdf-converter"  # ✅ Только ASCII
 version = "1.0.0"
 description = "GUI конвертер CSV → RDF/XML (CIM16)"
+readme = "README.md"
 authors = [{ name = "Your Name", email = "you@example.com" }]
-
-[tool.build-app]
-script = "ui.py"
-windowed = true
-onefile = true
-
-datas = [
-    { src = "config.json", dest = "." }
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
 ]
-
-hiddenimports = [
-    "hierarchy_parser",
-    "xml_generator",
-    "monitel_framework.config",
-    "monitel_framework.files",
-    "monitel_framework.logging"
+keywords = ["csv", "rdf", "cim", "converter"]
+dependencies = [
+    "PyQt6",
+    "toml"
 ]
-
-additional_args = ["--clean", "--noupx"]
-
-# icon = "icon.ico"
+requires-python = ">=3.9"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
 pythonpath = ["src"]
 addopts = [
     "-v",

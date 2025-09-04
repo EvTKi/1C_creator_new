@@ -33,13 +33,7 @@ jobs:
 
       - name: 🔹 Сборка .exe с помощью PyInstaller
         run: |
-          python -m PyInstaller ^
-            --noconsole ^
-            --onefile ^
-            --name "Конвертер CSV-RDF" ^
-            --add-data "config.json;." ^
-            --paths "src" ^
-            src/ui.py
+          python -m PyInstaller  --noconsole --onefile --name "Конвертер CSV-RDF" --add-data "config.json;." --paths "src" src/ui.py
 
       - name: 🔹 Загрузка артефакта (.exe)
         uses: actions/upload-artifact@v4
