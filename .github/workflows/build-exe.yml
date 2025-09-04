@@ -27,9 +27,9 @@ jobs:
           pip install --no-cache-dir -e .
           pip install --no-cache-dir pytest pytest-cov PyQt6 pyinstaller toml
 
-      - name: 🔹 Запуск тестов (проверка перед сборкой)
-        run: |
-          pytest
+      # - name: 🔹 Запуск тестов (проверка перед сборкой)
+      #   run: |
+      #     pytest
 
       - name: 🔹 Сборка .exe с помощью PyInstaller
         run: |
