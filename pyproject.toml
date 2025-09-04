@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "Конвертер CSV-RDF"
+version = "1.0.0"
+description = "GUI конвертер CSV → RDF/XML (CIM16)"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+
+[tool.build-app]
+script = "ui.py"
+windowed = true
+onefile = true
+
+datas = [
+    { src = "config.json", dest = "." }
+]
+
+hiddenimports = [
+    "hierarchy_parser",
+    "xml_generator",
+    "monitel_framework.config",
+    "monitel_framework.files",
+    "monitel_framework.logging"
+]
+
+additional_args = ["--clean", "--noupx"]
+
+# icon = "icon.ico"

@@ -25,7 +25,7 @@ def process_file(
     csv_path: Path,
     parent_uid: str,
     config: ConfigManager,
-    logger: logging.Logger
+    logger: Optional[logging.Logger] = None
 ) -> None:
     """
     Обрабатывает один CSV-файл: парсинг → генерация XML.
