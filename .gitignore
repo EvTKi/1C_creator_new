@@ -1,0 +1,9 @@
+/log
+/input
+/output
+/build
+/dist
+__pecache__
+*.csv
+!Sample.csv
+*.xml
