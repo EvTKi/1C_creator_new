@@ -21,7 +21,7 @@ class FileManager:
         self.base_directory = Path(base_directory).resolve()
         self.log_directory = log_directory 
     
-    def get_csv_files(self, exclude_files: Optional[List[str]] = None) -> List[str]:
+    def get_csv_files(self, exclude_files: Optional[List[str]] = None) -> List[Path]:
         """
         Получает список CSV файлов в базовой директории.
 
@@ -33,19 +33,13 @@ class FileManager:
         """
         if exclude_files is None:
             exclude_files = ["Sample.csv"]
-        
         exclude_files_lower = [f.lower() for f in exclude_files]
         csv_files = []
-        
-        try:
-            for file_path in self.base_directory.iterdir():
-                if (file_path.is_file() and
-                    file_path.suffix.lower() == '.csv' and
-                    file_path.name.lower() not in exclude_files_lower):
-                    csv_files.append(file_path.name)
-        except Exception as e:
-            raise Exception(f"Ошибка при сканировании директории {self.base_directory}: {e}")
-        
+        for file_path in self.base_directory.iterdir():
+            if (file_path.is_file() and
+                file_path.suffix.lower() == '.csv' and
+                file_path.name.lower() not in exclude_files_lower):
+                csv_files.append(file_path)  # ← Path, а не str
         return sorted(csv_files)
     
     def create_log_directory(self) -> str:
@@ -59,7 +53,7 @@ class FileManager:
         log_dir.mkdir(exist_ok=True)
         return str(log_dir)
     
-    def get_file_paths(self, filename: str) -> Tuple[str, str]:
+    def get_file_paths(self, filename: str) -> Tuple[Path, Path]:
         """
         Получает полные пути к входному и выходному файлам.
 
@@ -70,9 +64,8 @@ class FileManager:
             tuple: (путь_к_CSV, путь_к_XML)
         """
         csv_path = self.base_directory / filename
-        xml_filename = csv_path.stem + '.xml'
-        xml_path = self.base_directory / xml_filename
-        return str(csv_path), str(xml_path)
+        xml_path = self.base_directory / f"{csv_path.stem}.xml"
+        return csv_path, xml_path
     
     def validate_directory(self) -> bool:
         """
@@ -83,7 +76,7 @@ class FileManager:
         """
         return self.base_directory.exists() and self.base_directory.is_dir()
     
-    def get_log_path(self, csv_filename: str) -> str:
+    def get_log_path(self, csv_filename: str) -> Path:
         """
         Получает путь к лог-файлу для конкретного CSV файла.
 
@@ -98,7 +91,7 @@ class FileManager:
         
         basename = Path(csv_filename).stem
         date_str = datetime.now().strftime("%Y-%m-%d")
-        return str(log_dir / f"{basename}_{date_str}.log")
+        return log_dir / f"{basename}_{date_str}.log"
 
 
 class CLIManager:
@@ -125,7 +118,7 @@ class CLIManager:
         return folder_uid, csv_dir
     
     @staticmethod
-    def validate_and_list_files(file_manager: FileManager) -> List[str]:
+    def validate_and_list_files(file_manager: FileManager) -> List[Path]:
         """
         Проверяет директорию и возвращает список файлов.
 
@@ -133,7 +126,7 @@ class CLIManager:
             file_manager: экземпляр FileManager
 
         Returns:
-            List[str]: список файлов или пустой список если ошибка
+            List[Path]: список файлов или пустой список если ошибка
         """
         if not file_manager.validate_directory():
             print(f"Папка не найдена: {file_manager.base_directory}")

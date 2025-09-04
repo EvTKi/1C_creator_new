@@ -29,14 +29,15 @@ class TestFileManager(unittest.TestCase):
     from pathlib import Path
 
     def test_get_log_path(self):
-        """Проверка пути к лог-файлу (через Path)"""
         from datetime import datetime
         date_str = datetime.now().strftime("%Y-%m-%d")
         log_path = self.file_manager.get_log_path("test.log")
         expected = Path(self.temp_dir.name) / "log" / f"test_{date_str}.log"
-
-        # ✅ Сравниваем как Path
-        self.assertEqual(log_path.resolve(), expected.resolve())
+        
+        self.assertEqual(
+            log_path.resolve().as_posix(),
+            expected.resolve().as_posix()
+        )
 
     def test_validate_directory(self):
         """Проверка валидации директории"""
