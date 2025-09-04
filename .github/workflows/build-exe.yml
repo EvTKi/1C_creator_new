@@ -21,10 +21,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: 🔹 Установка зависимостей
+        timeout-minutes: 10
         run: |
-          pip install --upgrade pip
-          pip install -e .
-          pip install PyQt6 pyinstaller toml
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -e .
+          pip install --no-cache-dir pytest pytest-cov PyQt6 pyinstaller toml
 
       - name: 🔹 Запуск тестов (проверка перед сборкой)
         run: |
