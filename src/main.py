@@ -25,21 +25,19 @@ def process_file(
     csv_path: Path,
     parent_uid: str,
     config: ConfigManager,
-    logger: Optional[logging.Logger] = None
+    logger: logging.Logger
 ) -> None:
     """
     Обрабатывает один CSV-файл: парсинг → генерация XML.
-    """
-    # Используем переданный логгер или создаём новый
-    if logger is None:
-        from monitel_framework.logging import LoggerManager, LoggerConfig
-        log_config = LoggerConfig(
-            level=getattr(logging, config.get("logging.level", "INFO")),
-            format_string="%(asctime)s [%(levelname)s]: %(message)s",
-            date_format="%Y-%m-%d %H:%M:%S"
-        )
-        logger = LoggerManager(log_config).create_logger("main")
 
+    Использует переданный логгер для вывода всех сообщений (включая DEBUG).
+
+    Args:
+        csv_path (Path): Путь к CSV-файлу
+        parent_uid (str): UID корневого контейнера
+        config (ConfigManager): Конфигурация приложения
+        logger (logging.Logger): Логгер для вывода (GUI + файл)
+    """
     try:
         parser = HierarchyParser(str(csv_path), config.config, logger=logger)
         paths, external_children, cck_map, parent_uid_map = parser.parse()

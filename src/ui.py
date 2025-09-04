@@ -343,6 +343,16 @@ class MainWindow(QMainWindow):
         self.logger.info(f"Найдено файлов: {len(files)}")
 
     def _setup_logging(self) -> None:
+        """
+        Настраивает систему логирования для GUI.
+
+        Создаёт:
+        - Логгер с именем 'gui'
+        - Обработчик для вывода в интерфейс (через сигнал)
+        - При старте обработки будет добавлен FileHandler
+
+        Уровень логирования берётся из config.json.
+        """
         log_level = getattr(logging, self.config.get("logging.level", "INFO"))
         log_format = self.config.get("logging.format", "%(asctime)s [%(levelname)s]: %(message)s")
         date_format = self.config.get("logging.date_format", "%Y-%m-%d %H:%M:%S")
@@ -355,29 +365,22 @@ class MainWindow(QMainWindow):
         log_dir_path = base_dir / log_dir_name
         log_dir_path.mkdir(parents=True, exist_ok=True)
 
-        from datetime import datetime
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        gui_log_path = log_dir_path / f"gui_{date_str}.log"
-
+        # Основной логгер GUI
         self.logger = self.logger_manager.create_logger("gui", ui_callback=lambda msg: None)
         assert self.logger is not None, "Failed to create logger"
-        self.logger.setLevel(log_level)
 
+        # Сигнал для потокобезопасного вывода
         self.log_signal = LogSignal()
         self.log_signal.message.connect(self.append_log)
 
+        # UI-обработчик (единственный!)
         ui_handler = LogHandlerWidget(self.log_signal, level=log_level)
         ui_handler.setFormatter(log_config.formatter)
         self.logger.addHandler(ui_handler)
 
-        file_handler = FileLogHandler(gui_log_path, mode="a", encoding="utf-8")
-        file_handler.setLevel(log_level)
-        file_handler.setFormatter(log_config.formatter)
-        self.logger.addHandler(file_handler)
-
-        # self.logger.debug("✅ DEBUG-режим активирован")
+        self.logger.setLevel(log_level)
         self.logger.info("GUI запущен. Ожидание ввода...")
-
+    
     def append_log(self, message: str) -> None:
         cursor = self.log_text.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
@@ -387,6 +390,19 @@ class MainWindow(QMainWindow):
         self.log_text.setTextCursor(cursor)
 
     def start_conversion(self) -> None:
+        """
+        Запускает процесс конвертации выбранных CSV-файлов.
+
+        Для каждого файла:
+        - Создаёт отдельный логгер с записью в файл
+        - Вызывает process_file из main.py
+        - Обновляет прогресс-бар
+
+        Логи пишутся в:
+        - GUI (всё, включая DEBUG)
+        - Файл: log/gui_YYYY-MM-DD.log
+        - Файл: log/{имя_файла}_YYYY-MM-DD.log
+        """
         folder_uid = self.uid_input.text().strip()
         csv_dir = self.dir_input.text().strip()
 
@@ -408,7 +424,7 @@ class MainWindow(QMainWindow):
             log_dir_path = base_dir / log_dir_name
             log_dir_path.mkdir(parents=True, exist_ok=True)
 
-            # --- ✅ Добавляем FileHandler к существующему logger ---
+            # Добавляем FileHandler к существующему логгеру (без дублирования)
             from datetime import datetime
             date_str = datetime.now().strftime("%Y-%m-%d")
             gui_log_path = log_dir_path / f"gui_{date_str}.log"
@@ -419,7 +435,6 @@ class MainWindow(QMainWindow):
             self.logger.addHandler(file_handler)
 
             self.logger.info("=== ЗАПУСК ОБРАБОТКИ ===")
-            # ---
 
             file_manager = FileManager(base_directory=csv_dir, log_directory=log_dir_name)
             if not file_manager.validate_directory():
@@ -455,21 +470,30 @@ class MainWindow(QMainWindow):
             self.run_btn.setEnabled(True)
     
     def process_file(self, csv_path: Path, parent_uid: str, log_dir_path: Path) -> None:
-        """Обрабатывает файл, используя логику из main.py."""
-        from datetime import datetime
-        try:
-            # --- 🔥 Создаём отдельный логгер для этого файла ---
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            csv_log_path = log_dir_path / f"{csv_path.stem}_{date_str}.log"
+        """
+        Обрабатывает один CSV-файл, используя логику из main.py.
 
+        Создаёт отдельный логгер с записью в файл:
+        - Имя файла: {имя_файла}_YYYY-MM-DD.log
+        - Уровень: наследуется от GUI (DEBUG/INFO)
+
+        Args:
+            csv_path (Path): Путь к CSV-файлу
+            parent_uid (str): UID корневого объекта
+            log_dir_path (Path): Путь к папке log
+        """
+        from datetime import datetime
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        csv_log_path = log_dir_path / f"{csv_path.stem}_{date_str}.log"
+
+        try:
             file_logger = self.logger_manager.create_logger(
                 name=f"processor.{csv_path.stem}",
                 log_file_path=csv_log_path
             )
-            file_logger.setLevel(self.logger.level)  # Наследуем уровень GUI
-            # ---
+            file_logger.setLevel(self.logger.level)
 
-            # Передаём логгер в main.process_file
+            file_logger.debug(f"✅ Начало обработки: {csv_path}")
             process_file(csv_path, parent_uid, self.config, logger=file_logger)
 
         except Exception as e:
