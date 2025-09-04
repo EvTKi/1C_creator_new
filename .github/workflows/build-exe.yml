@@ -1,0 +1,48 @@
+name: 🏗️ Сборка .exe
+
+on:
+  push:
+    branches: ['main', 'master']
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+      - name: 🔹 Checkout кода
+        uses: actions/checkout@v4
+
+      - name: 🔹 Установка Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 🔹 Установка зависимостей
+        run: |
+          pip install --upgrade pip
+          pip install -e .
+          pip install PyQt6 pyinstaller toml
+
+      - name: 🔹 Запуск тестов (проверка перед сборкой)
+        run: |
+          pytest
+
+      - name: 🔹 Сборка .exe с помощью PyInstaller
+        run: |
+          python -m PyInstaller ^
+            --noconsole ^
+            --onefile ^
+            --name "Конвертер CSV-RDF" ^
+            --add-data "config.json;." ^
+            --paths "src" ^
+            src/ui.py
+
+      - name: 🔹 Загрузка артефакта (.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Конвертер CSV-RDF.exe
+          path: dist/Конвертер CSV-RDF.exe
+          if-no-files-found: error
