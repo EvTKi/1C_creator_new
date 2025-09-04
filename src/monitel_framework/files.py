@@ -19,7 +19,7 @@ class FileManager:
             log_directory: директория для логов
         """
         self.base_directory = Path(base_directory).resolve()
-        self.log_directory = log_directory
+        self.log_directory = log_directory 
     
     def get_csv_files(self, exclude_files: Optional[List[str]] = None) -> List[str]:
         """
