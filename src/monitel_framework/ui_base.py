@@ -6,7 +6,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import Optional, List, Union, cast
 
 # PyQt6
 try:
@@ -15,9 +15,8 @@ try:
         QPushButton, QLabel, QLineEdit, QFileDialog, QScrollArea,
         QCheckBox, QPlainTextEdit, QGroupBox, QProgressBar
     )
-    from PyQt6.QtCore import Qt, QObject, pyqtSignal
+    from PyQt6.QtCore import Qt, QObject, pyqtSignal, QProcess
     from PyQt6.QtGui import QPalette, QColor, QFont, QTextCursor
-    from PyQt6.QtCore import QProcess
 except ImportError as e:
     raise ImportError("Требуется PyQt6. Установите: pip install PyQt6") from e
 
@@ -39,18 +38,18 @@ class BaseMainWindow(QMainWindow):
         super().__init__()
         print("🔧 BaseMainWindow.__init__ вызван")
         
-        # Инициализация атрибутов UI до вызова _setup_logging
-        self.log_text = None
-        self.uid_input = None
-        self.dir_input = None
-        self.browse_btn = None
-        self.files_scroll = None
-        self.files_widget = None
-        self.files_layout = None
-        self.progress_bar = None
-        self.run_btn = None
-        self.open_folder_btn = None
-        self.status_label = None
+        # Аннотации для UI-элементов
+        self.uid_input: QLineEdit
+        self.dir_input: QLineEdit
+        self.browse_btn: QPushButton
+        self.files_scroll: QScrollArea
+        self.files_widget: QWidget
+        self.files_layout: QVBoxLayout
+        self.progress_bar: QProgressBar
+        self.run_btn: QPushButton
+        self.open_folder_btn: QPushButton
+        self.status_label: QLabel
+        self.log_text: QPlainTextEdit
         
         self.config = ConfigManager(config_file)
         self.logger_manager: Optional[LoggerManager] = None
@@ -283,13 +282,12 @@ class BaseMainWindow(QMainWindow):
 
     def append_log(self, message: str) -> None:
         """Добавляет сообщение в текстовое поле лога с автопрокруткой."""
-        if self.log_text is not None:
-            cursor = self.log_text.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            self.log_text.setTextCursor(cursor)
-            self.log_text.insertPlainText(message + "\n")
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            self.log_text.setTextCursor(cursor)
+        cursor = self.log_text.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self.log_text.setTextCursor(cursor)
+        self.log_text.insertPlainText(message + "\n")
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self.log_text.setTextCursor(cursor)
 
     def start_conversion(self) -> None:
         """Запускает процесс конвертации файлов."""

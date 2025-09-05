@@ -37,9 +37,7 @@ except ImportError:
 
 
 class MainWindow(BaseMainWindow):
-    """
-    Конкретная реализация GUI для конвертера CSV → RDF/XML.
-    """
+    """Конкретная реализация GUI для конвертера CSV → RDF/XML."""
 
     def __init__(self):
         super().__init__()
