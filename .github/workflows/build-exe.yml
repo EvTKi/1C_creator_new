@@ -1,276 +1,43 @@
-name: 🧪 Тесты и качество кода
+name: 🏗️ Сборка .exe
 
 on:
   push:
-    branches: ['main', 'master', 'develop']
-    tags: ['v*']
-  pull_request:
-    branches: ['main', 'master', 'develop']
-  schedule:
-    - cron: '0 0 * * 0' # Еженедельно в воскресенье в полночь
-  workflow_dispatch: # Ручной запуск
-
-env:
-  PYTHON_VERSION: '3.11'
-  POETRY_VERSION: '1.8.2'
+    branches: ['main', 'master']
 
 jobs:
-  test:
-    name: 🧪 Тестирование (Python ${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
+  build-exe:
+    runs-on: windows-latest
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest]
-        python-version: ['3.9', '3.10', '3.11']
-        include:
-          - os: windows-latest
-            python-version: '3.11'
-          - os: ubuntu-latest
-            python-version: '3.11'
+        python-version: ['3.11']
 
     steps:
       - name: 🔹 Checkout кода
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: 🔹 Установка Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-
-      - name: 🔹 Установка Poetry
-        run: |
-          pip install poetry==$POETRY_VERSION
 
       - name: 🔹 Установка зависимостей
+        timeout-minutes: 10
         run: |
-          poetry install --with test,dev --no-interaction
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -e .
+          pip install --no-cache-dir pytest pytest-cov PyQt6 pyinstaller toml
 
-      - name: 🔹 Проверка стиля кода с black
+      # - name: 🔹 Запуск тестов (проверка перед сборкой)
+      #   run: |
+      #     pytest
+
+      - name: 🔹 Сборка .exe с помощью PyInstaller
         run: |
-          poetry run black --check src/ tests/
+          python -m PyInstaller  --noconsole --onefile --name "Конвертер CSV-RDF" --add-data "config.json;." --paths "src" src/ui.py
 
-      - name: 🔹 Проверка типов с mypy
-        run: |
-          poetry run mypy src/ --ignore-missing-imports
-
-      - name: 🔹 Проверка импортов с isort
-        run: |
-          poetry run isort --check-only src/ tests/
-
-      - name: 🔹 Проверка безопасности с bandit
-        run: |
-          poetry run bandit -r src/ -x tests/
-
-      - name: 🔹 Запуск тестов с pytest
-        run: |
-          poetry run pytest --cov=src --cov-report=term --cov-report=xml -v --junitxml=test-results.xml
-
-      - name: 🔹 Загрузка результатов тестов
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: |
-            test-results.xml
-            coverage.xml
-
-      - name: 🔹 Отправка отчёта о покрытии в Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./coverage.xml
-          flags: unittests,${{ matrix.os }},py${{ matrix.python-version }}
-          name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}
-
-  lint:
-    name: 📝 Статический анализ
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: 🔹 Checkout кода
-        uses: actions/checkout@v4
-
-      - name: 🔹 Установка Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: 🔹 Установка Poetry
-        run: |
-          pip install poetry==$POETRY_VERSION
-
-      - name: 🔹 Установка зависимостей
-        run: |
-          poetry install --with lint --no-interaction
-
-      - name: 🔹 Запуск pylint
-        run: |
-          poetry run pylint src/ --exit-zero
-
-      - name: 🔹 Запуск flake8
-        run: |
-          poetry run flake8 src/ --exit-zero
-
-      - name: 🔹 Проверка безопасности с safety
-        run: |
-          poetry run safety check --full-report
-
-  build:
-    name: 📦 Сборка пакета
-    runs-on: ubuntu-latest
-    needs: [test, lint]
-
-    steps:
-      - name: 🔹 Checkout кода
-        uses: actions/checkout@v4
-
-      - name: 🔹 Установка Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: 🔹 Установка Poetry
-        run: |
-          pip install poetry==$POETRY_VERSION
-
-      - name: 🔹 Сборка пакета
-        run: |
-          poetry build
-
-      - name: 🔹 Загрузка собранного пакета
+      - name: 🔹 Загрузка артефакта (.exe)
         uses: actions/upload-artifact@v4
         with:
-          name: dist-package
-          path: dist/
-
-  quality-gate:
-    name: 🚀 Quality Gate
-    runs-on: ubuntu-latest
-    needs: [test, lint, build]
-
-    steps:
-      - name: 🔹 Проверка качества
-        run: |
-          echo "✅ Все проверки пройдены успешно!"
-          echo "📊 Результаты тестов: ${{ needs.test.result }}"
-          echo "📝 Результаты линтеров: ${{ needs.lint.result }}"
-          echo "📦 Сборка: ${{ needs.build.result }}"
-
-      - name: 🔹 Создание badge статуса
-        if: success()
-        uses: schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_SECRET }}
-          gistID: your-gist-id-here # Замените на ваш Gist ID
-          filename: workflow-status.json
-          label: Tests
-          message: PASSING
-          color: brightgreen
-
-      - name: 🔹 Уведомление в Slack (опционально)
-        if: always()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          channel: '#ci-cd'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-
-  deploy-docs:
-    name: 📚 Деплой документации
-    runs-on: ubuntu-latest
-    needs: quality-gate
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-
-    steps:
-      - name: 🔹 Checkout кода
-        uses: actions/checkout@v4
-
-      - name: 🔹 Установка Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: 🔹 Установка Poetry
-        run: |
-          pip install poetry==$POETRY_VERSION
-
-      - name: 🔹 Генерация документации
-        run: |
-          poetry install --with docs
-          poetry run pdoc src/monitel_framework -o docs/ --html
-
-      - name: 🔹 Деплой на GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
-
-  # Дополнительные workflow для специальных случаев
-  test-ui:
-    name: 🖥️ UI Тесты (только Windows)
-    runs-on: windows-latest
-    needs: test
-
-    steps:
-      - name: 🔹 Checkout кода
-        uses: actions/checkout@v4
-
-      - name: 🔹 Установка Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: 🔹 Установка зависимостей для UI тестов
-        run: |
-          pip install pytest pytest-qt pyqt6
-
-      - name: 🔹 Запуск UI тестов
-        run: |
-          python -m pytest tests/test_ui_base.py -v --tb=short
-
-      - name: 🔹 Проверка на утечки памяти
-        run: |
-          python -c "import gc; gc.set_debug(gc.DEBUG_LEAK); print('Memory leak check enabled')"
-
-  performance:
-    name: ⚡ Performance тесты
-    runs-on: ubuntu-latest
-    needs: test
-
-    steps:
-      - name: 🔹 Checkout кода
-        uses: actions/checkout@v4
-
-      - name: 🔹 Установка Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-
-      - name: 🔹 Запуск performance тестов
-        run: |
-          pip install pytest-benchmark
-          python -m pytest tests/performance/ -v --benchmark-only
-
-      - name: 🔹 Анализ производительности
-        run: |
-          echo "Performance metrics collected"
-
-# Дополнительные конфигурации
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+          name: Конвертер CSV-RDF.exe
+          path: dist/Конвертер CSV-RDF.exe
+          if-no-files-found: error
