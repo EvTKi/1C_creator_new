@@ -1,39 +1,66 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "csv-to-rdf-converter"  # ✅ Только ASCII
-version = "1.0.0"
-description = "GUI конвертер CSV → RDF/XML (CIM16)"
+[tool.poetry]
+name = "monitel-framework"
+version = "0.1.0"
+description = "Framework for CSV to RDF conversion"
+authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-authors = [{ name = "Your Name", email = "you@example.com" }]
-license = { text = "MIT" }
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-keywords = ["csv", "rdf", "cim", "converter"]
-dependencies = [
-    "PyQt6",
-    "toml"
-]
-requires-python = ">=3.9"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
-addopts = [
-    "-v",
-    "--tb=short",
-    "--no-cov-on-fail"
-]
+[tool.poetry.dependencies]
+python = "^3.9"
+PyQt6 = "^6.6.0"
 
-[tool.coverage.run]
-source = ["src"]
-omit = ["*/venv/*", "*/site-packages/*"]
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+pytest-cov = "^4.1.0"
+pytest-qt = "^4.2.0"
+pytest-benchmark = "^4.0.0"
 
-[tool.coverage.report]
-show_missing = true
-precision = 2
+[tool.poetry.group.lint.dependencies]
+black = "^23.11.0"
+isort = "^5.12.0"
+mypy = "^1.7.0"
+pylint = "^2.17.0"
+flake8 = "^6.1.0"
+bandit = "^1.7.5"
+safety = "^2.3.5"
+
+[tool.poetry.group.docs.dependencies]
+pdoc = "^13.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.5.0"
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pylance]
+extraPaths = ["src"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
