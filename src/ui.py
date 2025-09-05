@@ -4,45 +4,57 @@ GUI для конвертера CSV → RDF/XML (CIM16)
 """
 
 import sys
-import logging
 from pathlib import Path
 
+# 🔥 Принудительная очистка кэша
+to_remove = [k for k in sys.modules.keys() if k.startswith('monitel_framework')]
+for k in to_remove:
+    print(f"🧹 Удалён из кэша: {k}")
+    del sys.modules[k]
+
+# Добавляем src в путь
+src_path = Path(__file__).parent
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
+import logging
+
+# PyQt6
+from PyQt6.QtWidgets import QApplication
+
 # Фреймворк
-from monitel_framework import BaseMainWindow, ConfigManager
+try:
+    from monitel_framework import BaseMainWindow, ConfigManager
+    from monitel_framework.files import FileManager
+except ImportError as e:
+    raise ImportError(f"Не удалось импортировать из monitel_framework: {e}") from e
+
 # Логика приложения
 try:
     from main import process_file as main_process_file
 except ImportError:
     from .main import process_file as main_process_file
-from monitel_framework.files import FileManager
 
 
 class MainWindow(BaseMainWindow):
     """
     Конкретная реализация GUI для конвертера CSV → RDF/XML.
-
-    Наследует базовую структуру и реализует:
-    - Логику запуска обработки
-    - Обработку отдельных файлов
     """
 
-    def start_conversion(self) -> None:
-        """
-        Запускает пакетную обработку выбранных CSV-файлов.
+    def __init__(self):
+        super().__init__()
 
-        Для каждого файла:
-        - Создаёт отдельный логгер
-        - Вызывает main_process_file
-        - Обновляет прогресс-бар
-        """
+    def start_conversion(self) -> None:
         folder_uid = self.uid_input.text().strip()
         csv_dir = self.dir_input.text().strip()
 
         if not folder_uid:
+            assert self.logger is not None
             self.logger.error("❌ Не указан UID папки.")
             return
 
         if not csv_dir:
+            assert self.logger is not None
             self.logger.error("❌ Не указана папка с CSV.")
             return
 
@@ -53,6 +65,7 @@ class MainWindow(BaseMainWindow):
         try:
             file_manager = FileManager(base_directory=csv_dir)
             if not file_manager.validate_directory():
+                assert self.logger is not None
                 self.logger.error(f"❌ Папка не найдена: {csv_dir}")
                 return
 
@@ -60,6 +73,7 @@ class MainWindow(BaseMainWindow):
             csv_files = file_manager.get_csv_files(exclude_files=exclude_files)
 
             if not csv_files:
+                assert self.logger is not None
                 self.logger.error("❌ Нет подходящих CSV-файлов.")
                 return
 
@@ -67,33 +81,29 @@ class MainWindow(BaseMainWindow):
             self.progress_bar.setMaximum(total)
             self.progress_bar.setValue(0)
 
+            assert self.log_dir_path is not None, "log_dir_path не установлен"
+            log_dir_path = self.log_dir_path
+
             for i, filename in enumerate(csv_files, 1):
                 csv_path = file_manager.base_directory / filename
+                assert self.logger is not None
                 self.logger.info(f"--- [{i}/{total}] Обработка: {filename} ---")
-                self.process_file(csv_path, folder_uid, self.log_dir_path)
+                self.process_file(csv_path, folder_uid, log_dir_path)
                 self.progress_bar.setValue(i)
 
+            assert self.logger is not None
             self.logger.info("✅ Готово. Все файлы обработаны.")
             self.status_label.setText("🟢 Готово")
             self.progress_bar.setValue(total)
 
         except Exception as e:
+            assert self.logger is not None
             self.logger.error(f"❌ Ошибка: {e}", exc_info=True)
             self.status_label.setText("🔴 Ошибка")
         finally:
             self.run_btn.setEnabled(True)
 
     def process_file(self, csv_path: Path, parent_uid: str, log_dir_path: Path) -> None:
-        """
-        Обрабатывает один CSV-файл с помощью main_process_file.
-
-        Создаёт отдельный логгер с записью в файл: {имя}_YYYY-MM-DD.log
-
-        Args:
-            csv_path (Path): Путь к CSV-файлу
-            parent_uid (str): UID корневого объекта
-            log_dir_path (Path): Путь к папке log
-        """
         try:
             from monitel_framework.logging import LoggerManager, LoggerConfig
             from datetime import datetime
@@ -104,18 +114,18 @@ class MainWindow(BaseMainWindow):
             log_config = LoggerConfig(level=log_level)
             file_logger = LoggerManager(log_config).create_logger(
                 name=f"processor.{csv_path.stem}",
-                log_file_path=csv_log_path
+                log_file_path=str(csv_log_path)
             )
             file_logger.setLevel(log_level)
 
             main_process_file(csv_path, parent_uid, self.config, logger=file_logger)
 
         except Exception as e:
+            assert self.logger is not None
             self.logger.error(f"Ошибка: {e}", exc_info=True)
 
 
 def main():
-    """Точка входа для GUI-приложения."""
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

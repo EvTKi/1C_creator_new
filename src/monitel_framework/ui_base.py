@@ -1,29 +1,12 @@
 """
 Модуль: monitel_framework.ui_base
 Базовый класс для GUI-приложений в рамках Monitel Framework.
-
-Предоставляет:
-- Базовую структуру окна
-- Интеграцию с системой логирования
-- Современный стиль (тёмная тема)
-- Прогресс-бар, лог, кнопки
-- Готов к наследованию
-
-Пример использования:
-    class MyConverter(BaseMainWindow):
-        def start_conversion(self):
-            # Ваша логика
-            pass
-
-        def process_file(self, csv_path, parent_uid, log_dir_path):
-            # Обработка файла
-            pass
 """
 
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 # PyQt6
 try:
@@ -45,59 +28,46 @@ from .logging import LoggerConfig, LoggerManager, UILogHandler, FileLogHandler
 
 
 class LogSignal(QObject):
-    """
-    Сигнал для потокобезопасной передачи логов в GUI.
-
-    Используется для связи между логгером и интерфейсом.
-    """
+    """Сигнал для потокобезопасной передачи логов в GUI."""
     message = pyqtSignal(str)
 
 
 class BaseMainWindow(QMainWindow):
-    """
-    Базовое окно приложения с общей структурой и логированием.
-
-    Этот класс предназначен для наследования.
-    Переопределите:
-    - `start_conversion()` — для своей логики запуска
-    - `process_file()` — для обработки отдельного файла
-
-    Attributes:
-        config (ConfigManager): Конфигурация приложения
-        logger (Optional[logging.Logger]): Основной логгер GUI
-        file_checkboxes (List[QCheckBox]): Чекбоксы для выбора файлов
-        log_dir_path (Optional[Path]): Путь к папке log
-    """
+    """Базовое окно приложения с общей структурой и логированием."""
 
     def __init__(self, config_file: str = "config.json"):
-        """
-        Инициализирует базовое окно.
-
-        Args:
-            config_file (str): Путь к JSON-конфигурации
-        """
         super().__init__()
+        print("🔧 BaseMainWindow.__init__ вызван")
+        
+        # Инициализация атрибутов UI до вызова _setup_logging
+        self.log_text = None
+        self.uid_input = None
+        self.dir_input = None
+        self.browse_btn = None
+        self.files_scroll = None
+        self.files_widget = None
+        self.files_layout = None
+        self.progress_bar = None
+        self.run_btn = None
+        self.open_folder_btn = None
+        self.status_label = None
+        
         self.config = ConfigManager(config_file)
         self.logger_manager: Optional[LoggerManager] = None
         self.logger: Optional[logging.Logger] = None
-        self.file_checkboxes: List[QCheckBox] = []
+        self.file_checkboxes: List[Union[QCheckBox, QLabel]] = []
         self.log_dir_path: Optional[Path] = None
 
-        self._setup_logging()
+        # Сначала настраиваем UI, потом логирование
         self._setup_ui()
+        self._setup_logging()
         self._apply_modern_style()
 
+        assert self.logger is not None, "Logger не должен быть None"
+        self.logger.info("GUI запущен. Ожидание ввода...")
+
     def _setup_logging(self) -> None:
-        """
-        Настраивает систему логирования для GUI.
-
-        Создаёт:
-        - Логгер с именем 'gui'
-        - Обработчик для вывода в интерфейс (через сигнал)
-        - FileHandler для записи в файл `gui_YYYY-MM-DD.log`
-
-        Уровень берётся из `config.json`.
-        """
+        """Настраивает систему логирования для GUI."""
         log_level = getattr(logging, self.config.get("logging.level", "INFO"))
         log_format = self.config.get("logging.format", "%(asctime)s [%(levelname)s]: %(message)s")
         date_format = self.config.get("logging.date_format", "%Y-%m-%d %H:%M:%S")
@@ -107,6 +77,8 @@ class BaseMainWindow(QMainWindow):
 
         base_dir = Path.cwd()
         log_dir_name = self.config.get("io.log_dir", "log")
+        assert isinstance(log_dir_name, str), "io.log_dir должен быть строкой"
+
         self.log_dir_path = base_dir / log_dir_name
         self.log_dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -119,29 +91,24 @@ class BaseMainWindow(QMainWindow):
         self.logger.setLevel(log_level)
 
         self.log_signal = LogSignal()
+
+        def log_callback(msg: str) -> None:
+            """Обёртка для передачи лога через сигнал."""
+            self.log_signal.message.emit(msg)
+
         self.log_signal.message.connect(self.append_log)
 
-        ui_handler = UILogHandler(self.log_signal, level=log_level)
+        ui_handler = UILogHandler(callback=log_callback, level=log_level)
         ui_handler.setFormatter(log_config.formatter)
         self.logger.addHandler(ui_handler)
 
-        file_handler = FileLogHandler(gui_log_path, mode="a", encoding="utf-8")
+        file_handler = FileLogHandler(str(gui_log_path), mode="a", encoding="utf-8")
         file_handler.setLevel(log_level)
         file_handler.setFormatter(log_config.formatter)
         self.logger.addHandler(file_handler)
 
-        self.logger.info("GUI запущен. Ожидание ввода...")
-
     def _setup_ui(self) -> None:
-        """
-        Создаёт стандартный интерфейс с элементами:
-        - Поле ввода UID
-        - Кнопка выбора папки
-        - Список CSV-файлов
-        - Прогресс-бар
-        - Кнопки запуска и открытия папки
-        - Область логов
-        """
+        """Создаёт стандартный интерфейс."""
         container = QWidget()
         layout = QVBoxLayout()
         layout.setSpacing(15)
@@ -237,14 +204,7 @@ class BaseMainWindow(QMainWindow):
         self.setCentralWidget(container)
 
     def _apply_modern_style(self) -> None:
-        """
-        Применяет современный стиль (тёмная тема) к интерфейсу.
-
-        Стиль включает:
-        - Цвета фона и текста
-        - Скругления
-        - Эффекты при наведении
-        """
+        """Применяет современный стиль (тёмная тема) к интерфейсу."""
         colors = {
             "bg": "#1e1e1e",
             "fg": "#dcdcdc",
@@ -301,6 +261,7 @@ class BaseMainWindow(QMainWindow):
             ]
             files = sorted(files, key=lambda x: x.name)
         except Exception as e:
+            assert self.logger is not None
             self.logger.error(f"Ошибка чтения папки: {e}")
             return
 
@@ -317,47 +278,32 @@ class BaseMainWindow(QMainWindow):
             self.files_layout.addWidget(checkbox)
             self.file_checkboxes.append(checkbox)
 
+        assert self.logger is not None
         self.logger.info(f"Найдено файлов: {len(files)}")
 
     def append_log(self, message: str) -> None:
-        """
-        Добавляет сообщение в текстовое поле лога с автопрокруткой.
-
-        Args:
-            message (str): Сообщение для добавления
-        """
-        cursor = self.log_text.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        self.log_text.setTextCursor(cursor)
-        self.log_text.insertPlainText(message)
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        self.log_text.setTextCursor(cursor)
+        """Добавляет сообщение в текстовое поле лога с автопрокруткой."""
+        if self.log_text is not None:
+            cursor = self.log_text.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self.log_text.setTextCursor(cursor)
+            self.log_text.insertPlainText(message + "\n")
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            self.log_text.setTextCursor(cursor)
 
     def start_conversion(self) -> None:
-        """
-        Запускает процесс конвертации файлов.
-
-        Должен быть переопределён в подклассе.
-        """
+        """Запускает процесс конвертации файлов."""
         raise NotImplementedError("start_conversion() должен быть реализован в подклассе")
 
     def process_file(self, csv_path: Path, parent_uid: str, log_dir_path: Path) -> None:
-        """
-        Обрабатывает один CSV-файл.
-
-        Должен быть переопределён в подклассе.
-
-        Args:
-            csv_path (Path): Путь к CSV-файлу
-            parent_uid (str): UID корневого объекта
-            log_dir_path (Path): Путь к папке log
-        """
+        """Обрабатывает один CSV-файл."""
         raise NotImplementedError("process_file() должен быть реализован в подклассе")
 
     def open_results_folder(self) -> None:
         """Открывает папку с результатами в проводнике."""
         folder = self.dir_input.text()
         if not folder or not Path(folder).is_dir():
+            assert self.logger is not None
             self.logger.info("Папка не выбрана или не найдена.")
             return
 
@@ -369,17 +315,14 @@ class BaseMainWindow(QMainWindow):
                 QProcess.startDetached('open', [folder])
             else:
                 QProcess.startDetached('xdg-open', [folder])
+            assert self.logger is not None
             self.logger.info(f"Открыта папка: {folder}")
         except Exception as e:
+            assert self.logger is not None
             self.logger.error(f"Не удалось открыть папку: {e}")
 
     def closeEvent(self, event) -> None:
-        """
-        Обработчик закрытия окна — очищает логгеры.
-
-        Args:
-            event: Событие закрытия
-        """
+        """Обработчик закрытия окна — очищает логгеры."""
         if self.logger_manager:
             self.logger_manager.cleanup_all_loggers()
         super().closeEvent(event)
