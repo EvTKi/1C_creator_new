@@ -29,12 +29,7 @@ jobs:
 
       - name: 🔹 Сборка .exe с помощью PyInstaller
         run: |
-          python -m PyInstaller ^
-            --noconsole ^
-            --onefile ^
-            --name "Конвертер CSV-RDF" ^
-            --add-data "config.json;." ^
-            --distpath "dist" ^
+          python -m PyInstaller  noconsole  onefile  name "Конвертер CSV-RDF"  add-data "config.json;."  distpath "dist" ^
             src/ui.py
 
       - name: 🔹 Копирование config.json в папку с .exe
