@@ -40,8 +40,8 @@
 
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/yourname/csv-to-rdf-converter.git
-cd csv-to-rdf-converter
+git clone https://github.com/yourname/1C_creator_new.git
+cd 1C_creator_new
 # Создать виртуальное окружение
 python -m venv venv-ui
 venv-ui\Scripts\activate  # Windows
@@ -67,7 +67,7 @@ python src/ui.py
 📁 Структура проекта
 
 ```
-csv-to-rdf-converter/
+1C_creator_new/
 │
 ├── config.json                       ← Основная конфигурация
 ├── build.toml                        ← Конфиг сборки .exe
@@ -235,6 +235,5 @@ pyinstaller --noconsole --onefile --paths "путь\к\папке\src" src/ui.py
 
 ## 📞 Поддержка
 
-**Monitel Team**  
 📧 [gornovzena99@gmail.com](mailto:gornovzena99@gmail.com)  
-🌐 [github.com/EvTKi/csv-to-rdf-converter](https://github.com/EvTKi/csv-to-rdf-converter)
+🌐 [github.com/EvTKi/1C_creator_new](https://github.com/EvTKi/1C_creator_new)
