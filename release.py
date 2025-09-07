@@ -1,52 +1,33 @@
 """
-Скрипт для быстрого выпуска новой версии
-Запрашивает только номер версии
+Скрипт выпуска новой версии — с поддержкой UTF-8
 """
 
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
-def run(cmd: str, check: bool = True, shell: bool = True, encoding: str = 'utf-8') -> Optional[subprocess.CompletedProcess]:
-    """Выполняет команду и безопасно читает вывод"""
+
+def run(cmd: str, check=True, shell=True):
     print(f"🔧 Выполняю: {cmd}")
-    try:
-        result = subprocess.run(
-            cmd,
-            shell=shell,
-            capture_output=True,
-            text=True,
-            encoding=encoding,
-            errors='replace'  # Заменяет некорректные символы на 
-        )
-        if result.stdout:
-            clean_out = result.stdout.strip()
-            if clean_out:
-                print(f"✅ Вывод: {clean_out}")
-        if result.stderr:
-            clean_err = result.stderr.strip()
-            if clean_err:
-                print(f"⚠️  Ошибка: {clean_err}")
-        if check and result.returncode != 0:
-            print(f"❌ Команда завершилась с кодом {result.returncode}")
-            sys.exit(result.returncode)
-        return result
-    except Exception as e:
-        print(f"❌ Исключение при выполнении команды: {e}")
-        if check:
-            sys.exit(1)
-        return None  # Явно возвращаем None при ошибке
+    result = subprocess.run(cmd, shell=shell, capture_output=True, text=True, encoding='utf-8', errors='replace')
+    if result.stdout:
+        print(f"✅ {result.stdout.strip()}")
+    if result.stderr:
+        print(f"⚠️  {result.stderr.strip()}")
+    if check and result.returncode != 0:
+        print(f"❌ Ошибка: {result.returncode}")
+        sys.exit(result.returncode)
+    return result
+
 
 def main():
     print("🚀 Скрипт выпуска новой версии")
-    print("Формат версии: X.Y.Z, например: 1.2.0")
+    print("Формат версии: X.Y.Z, например: 1.5.0")
 
     version = input("\nВведите номер версии: ").strip()
 
-    # Проверка формата
     if not version.replace(".", "").isdigit() or len(version.split(".")) != 3:
-        print("❌ Ошибка: версия должна быть в формате X.Y.Z (например, 1.2.0)")
+        print("❌ Ошибка: версия должна быть в формате X.Y.Z")
         sys.exit(1)
 
     tag_name = f"v{version}"
@@ -59,29 +40,22 @@ def main():
         print("❌ Отменено пользователем")
         sys.exit(0)
 
-    # Обновляем VERSION
+    # ✅ Запись в UTF-8
     try:
-        with open("VERSION", "w", encoding="utf-8") as f:
+        with open("VERSION", "w", encoding="utf-8", newline='\n') as f:
             f.write(f"{version}\n")
-        print(f"✅ Записано в VERSION: {version}")
+        print(f"✅ Записано в VERSION (UTF-8): {version}")
     except Exception as e:
-        print(f"❌ Не удалось записать VERSION: {e}")
+        print(f"❌ Ошибка записи VERSION: {e}")
         sys.exit(1)
 
     # Git команды
     run("git add VERSION")
     run(f'git commit -m "chore: bump version to {version}"')
     run("git checkout main")
-
-    # Merge — может не потребоваться
-    merge_result = run(
-        "git merge HEAD@{1} --no-ff -m 'chore: merge release branch'",
-        check=False
-    )
-    # ✅ Pylance: проверяем, что merge_result не None
-    if merge_result is not None and merge_result.returncode != 0:
-        print("ℹ️  Merge не требуется или уже выполнен — продолжаем")
-
+    merge_result = run("git merge HEAD@{1} --no-ff -m 'chore: merge release branch'", check=False)
+    if merge_result.returncode != 0:
+        print("ℹ️  Merge не требуется или уже выполнен")
     run("git push origin main")
     run(f"git tag {tag_name}")
     run(f"git push origin {tag_name}")
@@ -89,7 +63,6 @@ def main():
     print("\n" + "✅" * 50)
     print(f"🎉 Выпуск {tag_name} запущен!")
     print("GitHub Actions начнёт сборку .exe и создаст релиз.")
-    print(f"Смотрите: github.com/ваш-репозиторий/actions")
     print("✅" * 50)
 
 
