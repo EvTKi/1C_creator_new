@@ -6,28 +6,21 @@ GUI для конвертера CSV → RDF/XML (CIM16)
 import sys
 from pathlib import Path
 
-# 🔥 Принудительная очистка кэша
+# Очистка кэша
 to_remove = [k for k in sys.modules.keys() if k.startswith('monitel_framework')]
 for k in to_remove:
-    print(f"🧹 Удалён из кэша: {k}")
     del sys.modules[k]
 
-# Добавляем src в путь
 src_path = Path(__file__).parent
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
 import logging
-
-# PyQt6
 from PyQt6.QtWidgets import QApplication
 
 # Фреймворк
-try:
-    from monitel_framework import BaseMainWindow, ConfigManager
-    from monitel_framework.files import FileManager
-except ImportError as e:
-    raise ImportError(f"Не удалось импортировать из monitel_framework: {e}") from e
+from monitel_framework import BaseMainWindow, ConfigManager
+from monitel_framework.files import FileManager
 
 # Логика приложения
 try:
@@ -37,10 +30,10 @@ except ImportError:
 
 
 class MainWindow(BaseMainWindow):
-    """Конкретная реализация GUI для конвертера CSV → RDF/XML."""
-
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("🧩 Конвертер CSV → RDF/XML (CIM16)")
+        self.resize(950, 720)
 
     def start_conversion(self) -> None:
         folder_uid = self.uid_input.text().strip()
@@ -79,7 +72,7 @@ class MainWindow(BaseMainWindow):
             self.progress_bar.setMaximum(total)
             self.progress_bar.setValue(0)
 
-            assert self.log_dir_path is not None, "log_dir_path не установлен"
+            assert self.log_dir_path is not None
             log_dir_path = self.log_dir_path
 
             for i, filename in enumerate(csv_files, 1):
@@ -125,6 +118,7 @@ class MainWindow(BaseMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
