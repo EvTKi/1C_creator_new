@@ -1,0 +1,32 @@
+# build.toml — корректный формат
+
+[pyinstaller]
+script = "src/ui.py"
+name = "Конвертер CSV-RDF"
+onefile = true
+
+datas = [
+    { src = "config.json", dest = "." }
+]
+
+hiddenimports = [
+    "main",
+    "ui",
+    "modules.hierarchy_parser",
+    "modules.xml_generator",
+    "monitel_framework",
+    "monitel_framework.config",
+    "monitel_framework.files",
+    "monitel_framework.logging",
+    "monitel_framework.ui_base",
+    "PyQt6",
+    "PyQt6.QtWidgets",
+    "PyQt6.QtCore",
+    "PyQt6.QtGui"
+]
+
+paths = ["src"]
+
+[build]
+name = "Конвертер CSV-RDF"
+# version больше не нужен — берётся из VERSION
