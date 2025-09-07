@@ -8,55 +8,38 @@ on:
 jobs:
   build-exe:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        python-version: ['3.11']
-
     steps:
-      - name: 🔹 Checkout кода
+      - name: 🔹 Checkout
         uses: actions/checkout@v4
 
-      - name: 🔹 Установка Python ${{ matrix.python-version }}
+      - name: 🔹 Установка Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: 🔹 Чтение версии из VERSION
-        id: version
-        run: |
-          VERSION=$(cat VERSION)
-          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
-          echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
-        shell: bash
+          python-version: '3.11'
 
       - name: 🔹 Установка зависимостей
         run: |
-          python -m pip install --upgrade pip
           pip install pyinstaller toml PyQt6
 
-      - name: 🔹 Запуск сборки через build.py
+      - name: 🔹 Чтение версии
+        id: version
         run: |
-          python build.py
+          $version = Get-Content -Path VERSION -Encoding UTF8 | ForEach-Object { $_.Trim() }
+          echo "RELEASE_VERSION=$version" >> $env:GITHUB_ENV
+          echo "TAG_NAME=v$version" >> $env:GITHUB_ENV
+        shell: pwsh
+
+      - name: 🔹 Запуск сборки
+        run: |
+          python build-tools/build.py
         shell: pwsh
 
       - name: 🔹 Опубликовать релиз
         uses: softprops/action-gh-release@v2
-        if: success()
         with:
           tag_name: ${{ env.TAG_NAME }}
           name: Выпуск ${{ env.TAG_NAME }}
-          body: |
-            Автоматически собранный дистрибутив:
-
-            - `Конвертер CSV-RDF.exe` — основная программа
-            - `config.json` — конфигурация
-
-            Распакуйте архив и запустите .exe.
-
-            Версия: ${{ env.RELEASE_VERSION }}
-          draft: false
-          prerelease: false
-          files: |
-            dist/Конвертер CSV-RDF_v*.zip
+          body: Автоматически собранный дистрибутив
+          files: dist/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}

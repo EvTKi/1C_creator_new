@@ -24,10 +24,6 @@ except ImportError:
     from .monitel_framework.logging import LoggerManager, LoggerConfig
     from .monitel_framework.config import ConfigManager
 
-# Специфичные модули приложения
-from hierarchy_parser import HierarchyParser
-from xml_generator import XMLGenerator
-
 
 import logging
 from pathlib import Path
@@ -35,8 +31,9 @@ from typing import Optional
 
 # Локальные модули
 from monitel_framework.config import ConfigManager
-from hierarchy_parser import HierarchyParser
-from xml_generator import XMLGenerator
+from modules.hierarchy_parser import HierarchyParser
+from modules.xml_generator import XMLGenerator
+
 
 
 def process_file(

@@ -10,6 +10,15 @@ from pathlib import Path
 import shutil
 import zipfile
 
+# Путь к корню проекта
+ROOT_DIR = Path(__file__).parent.parent
+BUILD_DIR = ROOT_DIR / "build"
+DIST_DIR = ROOT_DIR / "dist"
+FINAL_DIR = DIST_DIR / "final"
+CONFIG_FILE = ROOT_DIR / "build.toml"
+ZIP_NAME = DIST_DIR / f"Конвертер CSV-RDF_v{toml.load(CONFIG_FILE)['build']['version']}.zip"
+
+
 # --- Настройки ---
 CONFIG_FILE = "build.toml"
 BUILD_MODE = "release"  # В CI всегда release

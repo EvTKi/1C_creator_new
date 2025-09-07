@@ -1,1 +1,0 @@
-pyinstaller --noconsole --onefile --paths "C:\dev\csv-to-rdf-converter\src" src/ui.py 
