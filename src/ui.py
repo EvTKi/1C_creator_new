@@ -41,6 +41,8 @@ class MainWindow(BaseMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("Конвертер CSV → RDF/XML")
+        self.resize(800, 600)
 
     def start_conversion(self) -> None:
         folder_uid = self.uid_input.text().strip()
