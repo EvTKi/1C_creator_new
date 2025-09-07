@@ -1,6 +1,5 @@
 """
-Сборка .exe для Конвертера CSV → RDF/XML
-Режим: только release (без консоли)
+build.py — читает версию из VERSION
 """
 
 import toml
@@ -10,46 +9,48 @@ from pathlib import Path
 import shutil
 import zipfile
 
-# Путь к корню проекта
+# --- Пути ---
 ROOT_DIR = Path(__file__).parent.parent
+BUILD_TOOLS_DIR = Path(__file__).parent
 BUILD_DIR = ROOT_DIR / "build"
 DIST_DIR = ROOT_DIR / "dist"
 FINAL_DIR = DIST_DIR / "final"
+
 CONFIG_FILE = ROOT_DIR / "build.toml"
-ZIP_NAME = DIST_DIR / f"Конвертер CSV-RDF_v{toml.load(CONFIG_FILE)['build']['version']}.zip"
+VERSION_FILE = ROOT_DIR / "VERSION"
 
+# --- Чтение версии ---
+try:
+    with open(VERSION_FILE, "r", encoding="utf-8") as f:
+        VERSION = f.read().strip()
+    if not VERSION.replace(".", "").isdigit() or len(VERSION.split(".")) != 3:
+        raise ValueError(f"Неверный формат версии: {VERSION}")
+except Exception as e:
+    print(f"❌ Ошибка чтения VERSION: {e}")
+    sys.exit(1)
 
-# --- Настройки ---
-CONFIG_FILE = "build.toml"
-BUILD_MODE = "release"  # В CI всегда release
-
-# --- Загружаем конфиг ---
+# --- Загрузка конфига ---
 try:
     config = toml.load(CONFIG_FILE)
-except FileNotFoundError:
-    print(f"❌ Файл конфигурации не найден: {CONFIG_FILE}")
+except Exception as e:
+    print(f"❌ Ошибка загрузки build.toml: {e}")
     sys.exit(1)
 
 pyi = config["pyinstaller"]
 build = config["build"]
 
-# --- Пути ---
-src_dir = Path("src")
-dist_dir = Path("dist")
-final_dir = dist_dir / "final"
-zip_name = f"{build['name']}_v{build['version']}.zip"
+ZIP_NAME = DIST_DIR / f"{build['name']}_v{VERSION}.zip"
 
-# --- Очистка ---
+# --- Остальной код сборки ---
 def clean():
     for folder in ["build", "dist"]:
         if Path(folder).exists():
             shutil.rmtree(folder)
             print(f"🧹 Удалена папка: {folder}")
 
-# --- Сборка ---
 def build_exe():
     cmd = [sys.executable, "-m", "PyInstaller"]
-    cmd.append("--noconsole")        # Только release
+    cmd.append("--noconsole")
     cmd.append("--onefile")
     
     if pyi.get("name"):
@@ -75,42 +76,29 @@ def build_exe():
         print("❌ Сборка не удалась")
         sys.exit(1)
 
-# --- Подготовка финальной папки ---
 def prepare_final():
-    final_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Копируем .exe
+    FINAL_DIR.mkdir(parents=True, exist_ok=True)
     exe_name = f"{pyi['name']}.exe"
-    src_exe = dist_dir / exe_name
-    dst_exe = final_dir / exe_name
-    
+    src_exe = DIST_DIR / exe_name
+    dst_exe = FINAL_DIR / exe_name
     if not src_exe.exists():
         print(f"❌ Файл не найден: {src_exe}")
         sys.exit(1)
-        
     shutil.copy(src_exe, dst_exe)
     print(f"✅ Скопирован: {exe_name}")
-    
-    # Копируем config.json
-    if Path("config.json").exists():
-        shutil.copy("config.json", final_dir / "config.json")
-        print("✅ Скопирован: config.json")
-    else:
-        print("❌ config.json не найден!")
-        sys.exit(1)
+    shutil.copy(ROOT_DIR / "config.json", FINAL_DIR / "config.json")
+    print("✅ Скопирован: config.json")
 
-# --- Архивация ---
 def make_zip():
-    with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for file in final_dir.iterdir():
+    with zipfile.ZipFile(ZIP_NAME, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for file in FINAL_DIR.iterdir():
             zf.write(file, arcname=file.name)
-    print(f"📦 Архив создан: {zip_name}")
+    print(f"📦 Архив создан: {ZIP_NAME}")
 
-# --- Основной процесс ---
 if __name__ == "__main__":
-    print(f"🚀 Сборка: {build['name']} v{build['version']} (режим: release)")
+    print(f"🚀 Сборка: {build['name']} v{VERSION}")
     clean()
     build_exe()
     prepare_final()
     make_zip()
-    print(f"✅ Сборка завершена: {zip_name}")
+    print(f"✅ Сборка завершена: {ZIP_NAME}")
