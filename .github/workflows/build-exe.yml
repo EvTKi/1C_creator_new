@@ -1,8 +1,10 @@
 name: 🏗️ Сборка .exe и выпуск
 
+# Запуск только при создании тега вида v*
 on:
   push:
-    branches: ['main', 'master']
+    tags:
+      - 'v*'
 
 jobs:
   build-exe:
@@ -19,6 +21,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
+      - name: 🔹 Чтение версии из файла VERSION
+        id: version
+        run: |
+          VERSION=$(cat VERSION)
+          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
+        shell: bash
+
+      - name: 🔹 Лог информация о версии
+        run: |
+          echo "🔄 Сборка версии: ${{ env.RELEASE_VERSION }}"
+          echo "🏷  Тег: ${{ env.TAG_NAME }}"
 
       - name: 🔹 Установка зависимостей
         timeout-minutes: 10
@@ -44,21 +59,36 @@ jobs:
           Compress-Archive -Path * -DestinationPath ../converter-package.zip
         shell: pwsh
 
-      - name: 🔹 Создание релиза и загрузка артефакта
+      - name: 🔹 Создание релиза на GitHub
         uses: softprops/action-gh-release@v2
         if: success()
         with:
-          tag_name: v${{ env.RELEASE_VERSION }}
-          name: Выпуск v${{ env.RELEASE_VERSION }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: Выпуск ${{ env.TAG_NAME }}
           body: |
-            Автоматически собранный дистрибутив:
-            - `ConverterCSVtoRDF.exe`
-            - `config.json`
+            ## 🚀 Выпуск ${{ env.TAG_NAME }}
 
-            Запустите `.exe` — он будет искать `config.json` в той же папке.
+            Автоматически собранная версия приложения **Конвертер CSV → RDF/XML**.
+
+            ### 📦 Что включено
+            - `ConverterCSVtoRDF.exe` — основная программа
+            - `config.json` — конфигурация (должен быть в той же папке)
+
+            ### 📝 Что нового
+            - Современный интерфейс с поддержкой тёмной/светлой темы
+            - Улучшенное логирование с переносом строк
+            - Исправлены стили и анимации кнопок
+
+            ### 🧰 Как использовать
+            1. Скачайте `converter-package.zip`
+            2. Распакуйте в любую папку
+            3. Запустите `ConverterCSVtoRDF.exe`
+            4. Убедитесь, что `config.json` находится рядом с `.exe`
+
+            Версия: ${{ env.RELEASE_VERSION }}
           draft: false
           prerelease: false
           files: dist/converter-package.zip
+          overwrite: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_VERSION: ${{ github.run_number }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
