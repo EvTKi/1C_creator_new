@@ -1,4 +1,4 @@
-name: 🏗️ Сборка .exe
+name: 🏗️ Сборка .exe и выпуск
 
 on:
   push:
@@ -25,19 +25,44 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir -e .
-          pip install --no-cache-dir pytest pytest-cov PyQt6 pyinstaller toml
-
-      # - name: 🔹 Запуск тестов (проверка перед сборкой)
-      #   run: |
-      #     pytest
+          pip install --no-cache-dir PyQt6 pyinstaller toml
 
       - name: 🔹 Сборка .exe с помощью PyInstaller
         run: |
-          python -m PyInstaller  --noconsole --onefile --name "Конвертер CSV-RDF" --add-data "config.json;." --paths "src" src/ui.py
+          python -m PyInstaller ^
+            --noconsole ^
+            --onefile ^
+            --name "Конвертер CSV-RDF" ^
+            --add-data "config.json;." ^
+            --distpath "dist" ^
+            src/ui.py
 
-      - name: 🔹 Загрузка артефакта (.exe)
-        uses: actions/upload-artifact@v4
+      - name: 🔹 Копирование config.json в папку с .exe
+        run: |
+          mkdir dist/final
+          copy config.json dist/final\config.json
+          copy dist\Конвертер\ CSV-RDF.exe dist/final\Конвертер\ CSV-RDF.exe
+
+      - name: 🔹 Архивирование .exe + config.json
+        run: |
+          cd dist/final
+          zip -r ../converter-package.zip *
+
+      - name: 🔹 Создание релиза и загрузка артефакта
+        uses: softprops/action-gh-release@v2
+        if: success()
         with:
-          name: Конвертер CSV-RDF.exe
-          path: dist/Конвертер CSV-RDF.exe
-          if-no-files-found: error
+          tag_name: v${{ env.RELEASE_VERSION }}
+          name: Выпуск v${{ env.RELEASE_VERSION }}
+          body: |
+            Автоматически собранный дистрибутив:
+            - `Конвертер CSV-RDF.exe`
+            - `config.json`
+
+            Запустите `.exe` — он будет искать `config.json` в той же папке.
+          draft: false
+          prerelease: false
+          files: dist/converter-package.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_VERSION: ${{ github.run_number }}
