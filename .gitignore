@@ -1,3 +1,5 @@
+!Sample.csv
+!CHANGELOG.md
 /log
 /input
 /output
@@ -5,7 +7,6 @@
 /dist
 __pycache__
 *.csv
-!Sample.csv
 *.xml
 /venv*
 # Pytest

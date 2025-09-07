@@ -66,12 +66,28 @@ jobs:
         id: changelog
         run: |
           $version = "${{ env.RELEASE_VERSION }}"
-          $content = Get-Content -Path CHANGELOG.md -Raw
-          $regex = "(?s)(?<=## \[$version\][^\n]*\n)(.*?)(?=\n## |\Z)"
-          $changes = [regex]::Match($content, $regex).Value.Trim()
-          if ([string]::IsNullOrWhiteSpace($changes)) {
-            $changes = "Обновления не задокументированы."
+
+          if (-not (Test-Path "CHANGELOG.md")) {
+            echo "⚠️  Файл CHANGELOG.md не найден"
+            echo "CHANGELOG_BLOCK=История изменений временно недоступна." >> $env:GITHUB_ENV
+            exit 0
           }
+
+          $content = Get-Content -Path CHANGELOG.md -Raw -Encoding UTF8
+          $regex = "(?s)(?<=## \[$version\][^\n]*\n)(.*?)(?=\n## |\Z)"
+          $match = [regex]::Match($content, $regex)
+
+          if ($match.Success) {
+            $changes = $match.Value.Trim()
+          } else {
+            $changes = "Обновления для версии $version не задокументированы."
+          }
+
+          if ([string]::IsNullOrWhiteSpace($changes)) {
+            $changes = "Изменения не указаны."
+          }
+
+          # Отступ для YAML
           $changes = $changes -replace '^', '            '
           echo "CHANGELOG_BLOCK=$changes" >> $env:GITHUB_ENV
         shell: pwsh
