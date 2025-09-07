@@ -29,18 +29,20 @@ jobs:
 
       - name: 🔹 Сборка .exe с помощью PyInstaller
         run: |
-          python -m PyInstaller  --noconsole  --onefile  --name "Конвертер CSV-RDF"  --add-data "config.json;."  --distpath "dist"  src/ui.py
+          python -m PyInstaller   --noconsole   --onefile   --name "ConverterCSVtoRDF"   --add-data "config.json;."   --distpath "dist"   src/ui.py
 
-      - name: 🔹 Копирование config.json в папку с .exe
+      - name: 🔹 Подготовка финальной папки
         run: |
           mkdir dist/final
-          copy config.json dist/final\config.json
-          copy dist\Конвертер\ CSV-RDF.exe dist/final\Конвертер\ CSV-RDF.exe
+          Copy-Item -Path "config.json" -Destination "dist/final/config.json"
+          Copy-Item -Path "dist/ConverterCSVtoRDF.exe" -Destination "dist/final/ConverterCSVtoRDF.exe"
+        shell: pwsh
 
-      - name: 🔹 Архивирование .exe + config.json
+      - name: 🔹 Архивирование дистрибутива
         run: |
           cd dist/final
-          zip -r ../converter-package.zip *
+          Compress-Archive -Path * -DestinationPath ../converter-package.zip
+        shell: pwsh
 
       - name: 🔹 Создание релиза и загрузка артефакта
         uses: softprops/action-gh-release@v2
@@ -50,7 +52,7 @@ jobs:
           name: Выпуск v${{ env.RELEASE_VERSION }}
           body: |
             Автоматически собранный дистрибутив:
-            - `Конвертер CSV-RDF.exe`
+            - `ConverterCSVtoRDF.exe`
             - `config.json`
 
             Запустите `.exe` — он будет искать `config.json` в той же папке.

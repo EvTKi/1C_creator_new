@@ -40,7 +40,7 @@
 
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/yourname/1C_creator_new.git
+git clone https://github.com/EvTKi/1C_creator_new.git
 cd 1C_creator_new
 # Создать виртуальное окружение
 python -m venv venv-ui
