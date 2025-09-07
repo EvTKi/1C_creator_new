@@ -1,13 +1,9 @@
-name: 🏗️ Сборка .exe и выпуск
+name: 🏗️ Сборка .exe
 
-# Запуск только при создании тега вида v*
 on:
   push:
     tags:
       - 'v*'
-    branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build-exe:
@@ -25,7 +21,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: 🔹 Чтение версии из файла VERSION
+      - name: 🔹 Чтение версии из VERSION
         id: version
         run: |
           VERSION=$(cat VERSION)
@@ -33,93 +29,34 @@ jobs:
           echo "TAG_NAME=v$VERSION" >> $GITHUB_ENV
         shell: bash
 
-      - name: 🔹 Лог информация о версии
-        run: |
-          echo "🔄 Сборка версии: ${{ env.RELEASE_VERSION }}"
-          echo "🏷  Тег: ${{ env.TAG_NAME }}"
-
       - name: 🔹 Установка зависимостей
-        timeout-minutes: 10
         run: |
           python -m pip install --upgrade pip
-          pip install --no-cache-dir -e .
-          pip install --no-cache-dir PyQt6 pyinstaller toml
+          pip install pyinstaller toml PyQt6
 
-      - name: 🔹 Сборка .exe с помощью PyInstaller
+      - name: 🔹 Запуск сборки через build.py
         run: |
-          python -m PyInstaller   --noconsole   --onefile   --name "ConverterCSVtoRDF"   --add-data "config.json;."   --distpath "dist"   src/ui.py
-
-      - name: 🔹 Подготовка финальной папки
-        run: |
-          mkdir dist/final
-          Copy-Item -Path "config.json" -Destination "dist/final/config.json"
-          Copy-Item -Path "dist/ConverterCSVtoRDF.exe" -Destination "dist/final/ConverterCSVtoRDF.exe"
+          python build.py
         shell: pwsh
 
-      - name: 🔹 Архивирование дистрибутива
-        run: |
-          cd dist/final
-          Compress-Archive -Path * -DestinationPath ../converter-package.zip
-        shell: pwsh
-
-      - name: 🔹 Извлечь изменения для версии из CHANGELOG.md
-        id: changelog
-        run: |
-          $version = "${{ env.RELEASE_VERSION }}"
-
-          if (-not (Test-Path "CHANGELOG.md")) {
-            echo "⚠️  Файл CHANGELOG.md не найден"
-            echo "CHANGELOG_BLOCK=История изменений временно недоступна." >> $env:GITHUB_ENV
-            exit 0
-          }
-
-          $content = Get-Content -Path CHANGELOG.md -Raw -Encoding UTF8
-          $regex = "(?s)(?<=## \[$version\][^\n]*\n)(.*?)(?=\n## |\Z)"
-          $match = [regex]::Match($content, $regex)
-
-          if ($match.Success) {
-            $changes = $match.Value.Trim()
-          } else {
-            $changes = "Обновления для версии $version не задокументированы."
-          }
-
-          if ([string]::IsNullOrWhiteSpace($changes)) {
-            $changes = "Изменения не указаны."
-          }
-
-          # Отступ для YAML
-          $changes = $changes -replace '^', '            '
-          echo "CHANGELOG_BLOCK=$changes" >> $env:GITHUB_ENV
-        shell: pwsh
-
-      - name: 🔹 Создание релиза на GitHub
+      - name: 🔹 Опубликовать релиз
         uses: softprops/action-gh-release@v2
         if: success()
         with:
           tag_name: ${{ env.TAG_NAME }}
           name: Выпуск ${{ env.TAG_NAME }}
           body: |
-            ## 🚀 Выпуск ${{ env.TAG_NAME }}
+            Автоматически собранный дистрибутив:
 
-            Автоматически собранная версия приложения **Конвертер CSV → RDF/XML**.
+            - `Конвертер CSV-RDF.exe` — основная программа
+            - `config.json` — конфигурация
 
-            ### 📦 Что включено
-            - `ConverterCSVtoRDF.exe` — основная программа
-            - `config.json` — конфигурация (должен быть в той же папке)
-
-            ### 📝 Что нового
-            ${{ env.CHANGELOG_BLOCK }}
-
-            ### 🧰 Как использовать
-            1. Скачайте `converter-package.zip`
-            2. Распакуйте в любую папку
-            3. Запустите `ConverterCSVtoRDF.exe`
-            4. Убедитесь, что `config.json` находится рядом с `.exe`
+            Распакуйте архив и запустите .exe.
 
             Версия: ${{ env.RELEASE_VERSION }}
           draft: false
           prerelease: false
-          files: dist/converter-package.zip
-          overwrite: true
+          files: |
+            dist/Конвертер CSV-RDF_v*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
