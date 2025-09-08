@@ -1,5 +1,5 @@
 """
-Сборка .exe — безопасный вывод (только ASCII)
+Сборка .exe — безопасный вывод (только ASCII в print)
 """
 
 import subprocess
@@ -39,7 +39,7 @@ try:
 
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         config = toml.load(f)
-    print(f"[OK] Config loaded")
+    print("[OK] Config loaded")
 except Exception as e:
     print(f"[ERROR] Failed to load build.toml: {type(e).__name__}")
     sys.exit(1)
@@ -48,7 +48,10 @@ except Exception as e:
 # --- Данные из конфига ---
 pyi = config["pyinstaller"]
 build = config["build"]
-ZIP_NAME = DIST_DIR / f"{build['name']}_v{VERSION}.zip"
+
+# 🔸 Используем короткое ASCII-имя для логов
+BUILD_NAME_LOG = "ConverterCSVtoRDF"  # Только ASCII
+ZIP_NAME = DIST_DIR / f"{BUILD_NAME_LOG}_v{VERSION}.zip"
 
 
 # --- Очистка ---
@@ -67,6 +70,7 @@ def build_exe():
     cmd.append("--onefile")
 
     if pyi.get("name"):
+        # ← Это может быть кириллица, но PyInstaller принимает
         cmd.extend(["--name", pyi["name"]])
 
     for data in pyi.get("datas", []):
@@ -93,7 +97,7 @@ def build_exe():
 # --- Подготовка финальной папки ---
 def prepare_final():
     FINAL_DIR.mkdir(parents=True, exist_ok=True)
-    exe_name = f"{pyi['name']}.exe"
+    exe_name = f"{pyi['name']}.exe"  # Кириллическое имя .exe — допустимо
     src_exe = DIST_DIR / exe_name
     dst_exe = FINAL_DIR / exe_name
 
@@ -122,7 +126,7 @@ def make_zip():
 
 # --- Главная ---
 if __name__ == "__main__":
-    print(f"[INFO] Building {build['name']} v{VERSION}")
+    print(f"[INFO] Building {BUILD_NAME_LOG} v{VERSION}")
     clean()
     build_exe()
     prepare_final()
