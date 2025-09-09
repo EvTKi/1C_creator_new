@@ -6,6 +6,7 @@
 - Парсит иерархию
 - Генерирует RDF/XML
 - Сохраняет результат
+- Экспортирует modified.xlsx/csv с подсветкой старых и новых UID
 
 Может использоваться как в CLI, так и из GUI.
 """
@@ -20,20 +21,14 @@ try:
     from monitel_framework.files import FileManager, CLIManager
     from monitel_framework.logging import LoggerManager, LoggerConfig
 except ImportError:
+    from .monitel_framework.config import ConfigManager
     from .monitel_framework.files import FileManager, CLIManager
     from .monitel_framework.logging import LoggerManager, LoggerConfig
-    from .monitel_framework.config import ConfigManager
-
-
-import logging
-from pathlib import Path
-from typing import Optional
 
 # Локальные модули
-from monitel_framework.config import ConfigManager
 from modules.hierarchy_parser import HierarchyParser
 from modules.xml_generator import XMLGenerator
-
+from modules.modified_csv_exporter import save_modified_output  # ✅ Новый модуль
 
 
 def process_file(
@@ -43,10 +38,11 @@ def process_file(
     logger: Optional[logging.Logger] = None
 ) -> None:
     """
-    Обрабатывает один CSV-файл: парсинг → генерация RDF/XML → сохранение.
+    Обрабатывает один CSV-файл: парсинг → генерация RDF/XML → сохранение → экспорт modified.
 
-    Создаёт XML-файл в той же директории, что и исходный CSV.
-    Использует переданный логгер или создаёт новый.
+    Создаёт:
+    - XML-файл в той же директории, что и исходный CSV
+    - Modified XLSX/CSV с подсветкой старых (зелёных) и новых (чёрных) UID
 
     Args:
         csv_path (Path): Путь к входному CSV-файлу
@@ -60,11 +56,12 @@ def process_file(
     """
     # Если логгер не передан — создаём свой
     if logger is None:
-        from monitel_framework.logging import LoggerManager, LoggerConfig
         log_level = getattr(logging, config.get("logging.level", "INFO"))
-        log_format = config.get("logging.format", "%(asctime)s [%(levelname)s]: %(message)s")
+        log_format = config.get(
+            "logging.format", "%(asctime)s [%(levelname)s]: %(message)s")
         date_format = config.get("logging.date_format", "%Y-%m-%d %H:%M:%S")
-        log_config = LoggerConfig(level=log_level, format_string=log_format, date_format=date_format)
+        log_config = LoggerConfig(
+            level=log_level, format_string=log_format, date_format=date_format)
         logger_manager = LoggerManager(log_config)
         logger = logger_manager.create_logger("main")
 
@@ -74,16 +71,17 @@ def process_file(
     try:
         logger.info(f"Начало обработки файла: {csv_path.name}")
 
-        # Парсинг CSV
+        # --- Парсинг CSV ---
         parser = HierarchyParser(str(csv_path), config.config, logger=logger)
         paths, external_children, cck_map, parent_uid_map = parser.parse()
         logger.info(f"Загружено путей: {len(paths)}")
 
         if not paths:
-            logger.error("❌ Нет данных для обработки — файл пуст или не содержит валидных путей")
+            logger.error(
+                "❌ Нет данных для обработки — файл пуст или не содержит валидных путей")
             return
 
-        # Генерация XML
+        # --- Генерация XML ---
         generator = XMLGenerator(config.config, logger=logger)
         xml_content = generator.generate(
             paths=paths,
@@ -95,7 +93,7 @@ def process_file(
         )
         logger.info("✅ Генерация XML завершена")
 
-        # Сохранение
+        # --- Сохранение XML ---
         output_path = csv_path.with_suffix(".xml")
         if output_path.exists():
             output_path.unlink()
@@ -106,9 +104,37 @@ def process_file(
 
         logger.info(f"✅ Файл успешно сохранён: {output_path}")
 
+        # --- Экспорт modified-файла ---
+        try:
+            # Формируем данные для экспорта
+            hierarchy_data = [
+                {
+                    "path": path,
+                    "uid": parent_uid_map.get(path, "") or "",
+                    "CCK_code": cck_map.get(path, "")
+                }
+                for path in paths
+            ]
+
+            # ✅ Передаём logger для полного логирования
+            modified_path = save_modified_output(
+                csv_path=csv_path,
+                hierarchy=hierarchy_data,
+                config=config.config,
+                logger=logger
+            )
+            if modified_path:
+                logger.info(f"📄 Modified файл сохранён: {modified_path}")
+
+        except Exception as e:
+            logger.error(
+                f"❌ Ошибка при экспорте modified файла: {e}", exc_info=True)
+
     except Exception as e:
-        logger.error(f"❌ Ошибка при обработке {csv_path.name}: {e}", exc_info=True)
+        logger.error(
+            f"❌ Ошибка при обработке {csv_path.name}: {e}", exc_info=True)
         raise
+
 
 def main():
     """Основная функция CLI-интерфейса."""

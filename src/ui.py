@@ -3,11 +3,14 @@ GUI для конвертера CSV → RDF/XML (CIM16)
 С расширенным debug-логированием
 """
 
+from PyQt6.QtWidgets import QApplication
+import logging
 import sys
 from pathlib import Path
 
 # 🔥 Принудительная очистка кэша
-to_remove = [k for k in sys.modules.keys() if k.startswith('monitel_framework')]
+to_remove = [k for k in sys.modules.keys(
+) if k.startswith('monitel_framework')]
 for k in to_remove:
     del sys.modules[k]
 
@@ -15,8 +18,6 @@ src_path = Path(__file__).parent
 if str(src_path) not in sys.path:
     sys.path.insert(0, str(src_path))
 
-import logging
-from PyQt6.QtWidgets import QApplication
 
 # Фреймворк
 try:
@@ -30,19 +31,22 @@ except Exception as e:
 # Логика приложения
 main_process_file = None
 
+
 def load_main_module():
     """Загружает main_process_file с отладкой"""
     global main_process_file
     try:
         from main import process_file as mp
         main_process_file = mp
-        assert callable(main_process_file), "main.process_file не является функцией"
+        assert callable(
+            main_process_file), "main.process_file не является функцией"
         return True
     except Exception as e:
         print(f"❌ Ошибка загрузки main.py: {e}")
         if 'logger' in globals():
             logger.error(f"❌ Не удалось загрузить main.py: {e}")
         return False
+
 
 class MainWindow(BaseMainWindow):
     def __init__(self):
@@ -57,7 +61,8 @@ class MainWindow(BaseMainWindow):
         self.logger.debug(f"📂 log_dir_path: {self.log_dir_path}")
 
         if not load_main_module():
-            self.logger.critical("🛑 КРИТИЧЕСКАЯ ОШИБКА: main.py не загружен. Приложение НЕ БУДЕТ работать.")
+            self.logger.critical(
+                "🛑 КРИТИЧЕСКАЯ ОШИБКА: main.py не загружен. Приложение НЕ БУДЕТ работать.")
         else:
             self.logger.info("✅ Модуль main.py успешно загружен")
 
@@ -112,9 +117,11 @@ class MainWindow(BaseMainWindow):
 
             for i, filename in enumerate(csv_files, 1):
                 csv_path = file_manager.base_directory / filename
-                self.logger.info(f"--- [{i}/{total}] Обработка: {filename} ---")
+                self.logger.info(
+                    f"--- [{i}/{total}] Обработка: {filename} ---")
                 self.logger.debug(f"🔍 Путь к файлу: {csv_path}")
-                self.logger.debug(f"📝 Лог будет сохранён в: {log_dir_path / f'{csv_path.stem}_*.log'}")
+                self.logger.debug(
+                    f"📝 Лог будет сохранён в: {log_dir_path / f'{csv_path.stem}_*.log'}")
 
                 self.process_file(csv_path, folder_uid, log_dir_path)
                 self.progress_bar.setValue(i)
@@ -126,21 +133,24 @@ class MainWindow(BaseMainWindow):
         except Exception as e:
             import traceback
             tb = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            self.logger.error(f"❌ Ошибка в start_conversion:\n{e}\n{tb}", exc_info=True)
+            self.logger.error(
+                f"❌ Ошибка в start_conversion:\n{e}\n{tb}", exc_info=True)
         finally:
             self.run_btn.setEnabled(True)
 
     def process_file(self, csv_path: Path, parent_uid: str, log_dir_path: Path) -> None:
         try:
             if main_process_file is None:
-                self.logger.error("❌ Функция main_process_file не загружена. Проверьте main.py")
+                self.logger.error(
+                    "❌ Функция main_process_file не загружена. Проверьте main.py")
                 return
 
             from datetime import datetime
             date_str = datetime.now().strftime("%Y-%m-%d")
             csv_log_path = log_dir_path / f"{csv_path.stem}_{date_str}.log"
 
-            log_level = getattr(logging, self.config.get("logging.level", "INFO"))
+            log_level = getattr(
+                logging, self.config.get("logging.level", "INFO"))
             log_config = LoggerConfig(level=log_level)
             file_logger = LoggerManager(log_config).create_logger(
                 name=f"processor.{csv_path.stem}",
@@ -150,12 +160,20 @@ class MainWindow(BaseMainWindow):
 
             self.logger.debug(f"🖨 Создан логгер для файла: {csv_log_path}")
 
-            main_process_file(csv_path, parent_uid, self.config, logger=file_logger)
+            main_process_file(csv_path, parent_uid,
+                              self.config, logger=file_logger)
+            # ✅ Дополнительный лог в GUI
+            modified_path = csv_path.parent / \
+                f"{csv_path.stem}_modified_*.xlsx"
+            # Просто информируем — путь можно уточнить в логах
+            self.append_log(
+                f"📄 Создан modified файл: {csv_path.stem}_modified_*.xlsx\n")
 
         except Exception as e:
             import traceback
             tb = ''.join(traceback.format_exception(None, e, e.__traceback__))
-            self.logger.error(f"❌ Ошибка в process_file:\n{e}\n{tb}", exc_info=True)
+            self.logger.error(
+                f"❌ Ошибка в process_file:\n{e}\n{tb}", exc_info=True)
 
 
 def main():

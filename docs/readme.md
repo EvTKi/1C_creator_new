@@ -73,7 +73,9 @@ python src/ui.py
 ├── build.toml                        ← Конфиг сборки .exe
 ├── build.py                          ← Скрипт сборки через PyInstaller
 ├── README.md                         ← Эта инструкция
-│
+├── build-tools/
+│   ├── build.py                      ← Скрипт сборки через PyInstaller
+│   ├── realease.py                   ← Скрипт выпуска релиза
 ├── src/
 │   ├── ui.py                         ← Графический интерфейс (наследует BaseMainWindow)
 │   ├── main.py                       ← Основная логика обработки

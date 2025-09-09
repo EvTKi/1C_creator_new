@@ -7,9 +7,16 @@
 		"input_dir": "input",
 		"output_dir": "output",
 		"log_dir": "log",
-		"exclude_files": ["Sample.csv"],
+		"exclude_files": [
+			"Sample.csv"
+		],
 		"default_encoding": "utf-8-sig",
-		"allowed_encodings": ["utf-8-sig", "utf-8", "cp1251", "windows-1251"]
+		"allowed_encodings": [
+			"utf-8-sig",
+			"utf-8",
+			"cp1251",
+			"windows-1251"
+		]
 	},
 	"logging": {
 		"level": "DEBUG",
@@ -24,6 +31,11 @@
 			"cck_code": "ОбъектРемонтаКодККС"
 		},
 		"delimiter": "auto"
+	},
+	"modified_output": {
+		"enabled": true,
+		"format": "xlsx",
+		"include_status_column": true
 	},
 	"xml": {
 		"namespaces": {
